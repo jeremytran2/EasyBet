@@ -9,7 +9,7 @@ class CrashGameManager:
         self.nonce = 0
         self.crash_point = 0
         self.multiplier = 1.0
-        self.bets = {}  # {player_id: {"amount": 100, "cash_out_multiplier": None}}
+        self.bets = {}  # {player_id: {"amount": 100, "cash_out_multiplier": None, "client_seed": "seed"}}
         self.is_running = False
         self.websocket_manager = websocket_manager
 
@@ -39,7 +39,14 @@ class CrashGameManager:
         # Reset game state
         self.nonce += 1
         self.multiplier = 1.0
-        client_seed = "default_seed"  # Replace this with player-provided seed logic
+
+        # Use the first player's client seed or a default seed
+        if self.bets:
+            first_bet = next(iter(self.bets.values()))  # Get the first bet
+            client_seed = first_bet.get("client_seed", "default_seed")
+        else:
+            client_seed = "default_seed"
+
         self.crash_point = self.calculate_crash_point(client_seed)
         self.is_running = True
         self.bets = {}  # Reset active bets
@@ -94,16 +101,26 @@ class CrashGameManager:
                         player_id, "You lost!"
                     )
 
-    def place_bet(self, player_id, amount):
-        """Place a bet for the current round."""
-        if self.is_running:
-            self.bets[player_id] = {"amount": amount, "cash_out_multiplier": None}
-            print(f"Player {player_id} placed a bet of {amount}.")
-        else:
+    def place_bet(self, player_id, amount, client_seed=None):
+        """
+        Place a bet for the current round, including the client's optional seed.
+        """
+        if not self.is_running:
             print("Cannot place a bet. Game is not running.")
+            return
+
+        # Use the provided client seed or generate a default one
+        client_seed = client_seed or "default_seed"
+        self.bets[player_id] = {
+            "amount": amount,
+            "cash_out_multiplier": None,
+            "client_seed": client_seed,
+        }
+        print(f"Player {player_id} placed a bet of {amount} with client seed: {client_seed}.")
 
     def cash_out(self, player_id):
         """Handle player cash-out requests."""
         if player_id in self.bets:
             self.bets[player_id]["cash_out_multiplier"] = self.multiplier
             print(f"Player {player_id} cashed out at {self.multiplier:.2f}x.")
+
