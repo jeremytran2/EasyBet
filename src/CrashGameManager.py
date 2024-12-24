@@ -84,6 +84,11 @@ class CrashGameManager:
         )
         print(f"Game Crashed at: {self.crash_point:.2f}x")
 
+        # Broadcast the server seed for verification
+        await self.websocket_manager.broadcast_message(
+            f"Server Seed Revealed: {self.server_seed}"
+        )
+
         # Process payouts
         for player_id, bet in self.bets.items():
             if bet["cash_out_multiplier"] is not None:
@@ -123,4 +128,3 @@ class CrashGameManager:
         if player_id in self.bets:
             self.bets[player_id]["cash_out_multiplier"] = self.multiplier
             print(f"Player {player_id} cashed out at {self.multiplier:.2f}x.")
-
