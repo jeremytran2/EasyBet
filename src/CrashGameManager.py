@@ -9,7 +9,7 @@ class CrashGameManager:
         self.nonce = 0
         self.crash_point = 0
         self.multiplier = 1.0
-        self.bets = {}  # {player_id: {"amount": 100, "cash_out_multiplier": None, "client_seed": "seed"}}
+        self.bets = {}  # {player_id: {"amount": 100, "cash_out_multiplier": None}}
         self.is_running = False
         self.websocket_manager = websocket_manager
 
@@ -21,9 +21,9 @@ class CrashGameManager:
         """Hash the server seed using SHA-256."""
         return hashlib.sha256(server_seed.encode()).hexdigest()
 
-    def calculate_crash_point(self, client_seed):
-        """Calculate the crash point using the provably fair mechanism, including client seed."""
-        combined = f"{self.server_seed}{client_seed}{self.nonce}"  # Include client seed
+    def calculate_crash_point(self):
+        """Calculate the crash point using the provably fair mechanism."""
+        combined = f"{self.server_seed}{self.nonce}"
         hash_value = hashlib.sha256(combined.encode()).hexdigest()
         random_value = int(hash_value[:8], 16) / 0xFFFFFFFF
         if random_value < 0.01:
@@ -40,14 +40,7 @@ class CrashGameManager:
         self.nonce += 1
         self.multiplier = 1.0
 
-        # Use the first player's client seed or a default seed
-        if self.bets:
-            first_bet = next(iter(self.bets.values()))  # Get the first bet
-            client_seed = first_bet.get("client_seed", "default_seed")
-        else:
-            client_seed = "default_seed"
-
-        self.crash_point = self.calculate_crash_point(client_seed)
+        self.crash_point = self.calculate_crash_point()
         self.is_running = True
         self.bets = {}  # Reset active bets
 
@@ -106,22 +99,19 @@ class CrashGameManager:
                         player_id, "You lost!"
                     )
 
-    def place_bet(self, player_id, amount, client_seed=None):
+    def place_bet(self, player_id, amount):
         """
-        Place a bet for the current round, including the client's optional seed.
+        Place a bet for the current round.
         """
         if not self.is_running:
             print("Cannot place a bet. Game is not running.")
             return
 
-        # Use the provided client seed or generate a default one
-        client_seed = client_seed or "default_seed"
         self.bets[player_id] = {
             "amount": amount,
             "cash_out_multiplier": None,
-            "client_seed": client_seed,
         }
-        print(f"Player {player_id} placed a bet of {amount} with client seed: {client_seed}.")
+        print(f"Player {player_id} placed a bet of {amount}.")
 
     def cash_out(self, player_id):
         """Handle player cash-out requests."""
